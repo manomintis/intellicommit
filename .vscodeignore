@@ -15,6 +15,7 @@ package-lock.json
 .gitignore
 *.vsix
 CONTRIBUTING.md
+CLAUDE.md
 images/*.svg
 images/*.png
 !images/icon.png
