@@ -31,6 +31,8 @@ No extra subscription needed: IntelliCommit works with your existing Claude plan
 2. Open the Source Control view and click **✨** (Generate Commit Message) at the top. You can also run **IntelliCommit: Generate Commit Message** from the Command Palette.
 3. Review the message, edit it if you like, and commit.
 
+![A generated commit message in the Source Control view](images/message.png)
+
 While the message is being written, the ✨ button becomes a **Stop** button. If you stop it, or if something goes wrong, the commit box returns to what it contained before.
 
 If the commit box already has text, IntelliCommit replaces it by default. You can change this to add the new message below it, or to ask each time.
@@ -39,12 +41,14 @@ If the commit box already has text, IntelliCommit replaces it by default. You ca
 
 The status bar shows which model IntelliCommit will use. Click it, or run **IntelliCommit: Select LLM Source**, to choose where the model comes from:
 
+![The Select LLM Source picker](images/model-picker.png)
+
 | Option | What it does |
 |---|---|
-| Claude Code, then VS Code (default) | Uses Claude Code. If it isn't installed, uses a VS Code model. |
-| VS Code, then Claude Code | Uses a VS Code model. If none is available, uses Claude Code. |
-| Claude Code only | Uses only Claude Code. |
-| VS Code only | Uses only VS Code models. |
+| Claude Code CLI, fallback to VS Code LLMs (default) | Uses Claude Code. If it isn't installed, uses a VS Code model. |
+| VS Code LLMs, fallback to Claude Code CLI | Uses a VS Code model. If none is available, uses Claude Code. |
+| Claude Code CLI only | Uses only Claude Code. |
+| VS Code LLMs only | Uses only VS Code models. |
 
 The backup option is used only when the first choice isn't installed or available, not when a request fails.
 
@@ -56,9 +60,11 @@ Each request through Claude Code takes a few seconds, because Claude Code starts
 
 ## Settings
 
+![IntelliCommit settings in the Settings editor](images/settings.png)
+
 | Setting | Default | Description |
 |---|---|---|
-| `intellicommit.source` | Claude Code, then VS Code | Where the AI model comes from (see above). |
+| `intellicommit.source` | Claude Code CLI, fallback to VS Code LLMs | Where the AI model comes from (see above). |
 | `intellicommit.claudeCode.model` | `haiku` | Claude model: `haiku`, `sonnet`, `opus`, or `fable`. |
 | `intellicommit.claudeCode.path` | empty | Location of the `claude` program, if IntelliCommit can't find it on its own. |
 | `intellicommit.model` | empty | ID of the VS Code model to use. Empty means automatic. |

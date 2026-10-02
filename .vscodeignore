@@ -18,3 +18,5 @@ package-lock.json
 .local-ext/**
 CONTRIBUTING.md
 images/*.svg
+images/*.png
+!images/icon.png
