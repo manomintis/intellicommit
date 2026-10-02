@@ -15,7 +15,6 @@ esbuild.js
 package-lock.json
 .gitignore
 *.vsix
-.local-ext/**
 CONTRIBUTING.md
 images/*.svg
 images/*.png

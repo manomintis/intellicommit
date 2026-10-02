@@ -1,5 +1,4 @@
 const esbuild = require('esbuild');
-const { copyToLocalExt } = require('./scripts/copyToLocalExt');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -23,18 +22,6 @@ const esbuildProblemMatcherPlugin = {
   },
 };
 
-/** @type {import('esbuild').Plugin} */
-const copyToLocalExtPlugin = {
-  name: 'copy-to-local-ext',
-  setup(build) {
-    build.onEnd((result) => {
-      if (result.errors.length === 0) {
-        copyToLocalExt();
-      }
-    });
-  },
-};
-
 async function main() {
   const ctx = await esbuild.context({
     entryPoints: ['src/extension.ts'],
@@ -48,7 +35,7 @@ async function main() {
     outfile: 'dist/extension.js',
     external: ['vscode'],
     logLevel: 'silent',
-    plugins: [copyToLocalExtPlugin, esbuildProblemMatcherPlugin],
+    plugins: [esbuildProblemMatcherPlugin],
   });
   if (watch) {
     await ctx.watch();

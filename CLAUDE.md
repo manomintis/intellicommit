@@ -16,7 +16,6 @@ npm test               # pretest (compile-tests + compile), then unit + integrat
 npm run test:integration  # @vscode/test-cli; downloads VS Code on first run
 npm run l10n           # regenerate l10n/bundle.l10n.json from vscode.l10n.t() calls
 npm run package:vsix   # Marketplace .vsix
-npm run package:local  # local .vsix with the button inside the commit box (proposed API)
 ```
 
 Run a single unit test file or test (compile first; tests run from `out/`, not `src/`):
@@ -47,6 +46,6 @@ Flow of one generation, orchestrated by `Generator` in `src/commands/generate.ts
 
 - **Settings schema ↔ code:** the code validates settings itself (`config.ts`), and `test/unit/manifest.test.ts` asserts that defaults/enums/bounds in `package.json` match constants in the source (`DEFAULT_EXCLUDE_GLOBS`, `DEFAULT_PREFERRED_MODELS`, `CLAUDE_CODE_MODELS`, `SOURCE_SETTINGS`, diff-char bounds, `MAX_CUSTOM_INSTRUCTIONS_CHARS`). Change both together.
 - **Localization:** manifest strings use `%key%` placeholders resolved from `package.nls.json`; runtime user-facing strings go through `vscode.l10n.t(...)`, and `npm run l10n` must be rerun after adding/changing them. Log messages (`log()`) are not localized.
-- **Local "in-box button" variant:** `scripts/localExtension.mjs` patches the manifest to add the proposed `scm/inputBox` menu. `.local-ext/` is the F5 dev copy; `esbuild.js` copies each successful build into it. Don't add the proposed API to the real `package.json` — the Marketplace rejects it.
+- **No in-box button:** the `scm/inputBox` menu is a proposed API the Marketplace rejects; the ⌥↩ / Alt+Enter keybinding (`when: scmRepository`) covers the commit box instead.
 - Behavior changes or new settings should be reflected in `README.md` and `CHANGELOG.md`. Commit messages follow the README's "Commit message format" section (imperative, ≤50/72-char subject, no trailing period).
 - CI (`.github/workflows/ci.yml`) runs types, lint, and unit tests on Linux/Windows/macOS, plus integration tests on all three and `vsce package` on Linux; keep code cross-platform (notably Windows process spawning/termination).

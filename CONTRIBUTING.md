@@ -18,10 +18,7 @@ cd intellicommit
 npm install
 ```
 
-To try the extension, open the folder in VS Code and press <kbd>F5</kbd>. Two launch options are available:
-
-- **Run Extension (button in commit box)** shows the button inside the commit message box. It uses a modified copy of the extension in `.local-ext/` with VS Code's proposed API turned on.
-- **Run Extension (Marketplace manifest, title-bar button only)** shows the extension exactly as Marketplace users get it.
+To try the extension, open the folder in VS Code and press <kbd>F5</kbd>.
 
 ## Useful commands
 
@@ -31,7 +28,6 @@ To try the extension, open the folder in VS Code and press <kbd>F5</kbd>. Two la
 | `npm run test:unit` | Runs the unit tests. These are fast and don't need VS Code. |
 | `npm test` | Runs the unit tests and the integration tests. The first run downloads a copy of VS Code. |
 | `npm run package:vsix` | Builds the `.vsix` file published to the Marketplace. |
-| `npm run package:local` | Builds a local `.vsix` with the button inside the commit box. |
 | `npm run l10n` | Updates `l10n/bundle.l10n.json` after you add or change user-facing text. |
 
 ## Before you open a pull request

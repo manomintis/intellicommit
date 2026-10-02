@@ -50,9 +50,15 @@ export function rootUriOf(arg: unknown): vscode.Uri | undefined {
   return undefined;
 }
 
+/** The keybinding passes `{ fromCommitBox: true }`; VS Code doesn't say which commit box has focus. */
+export function isFromCommitBox(arg: unknown): boolean {
+  return typeof arg === 'object' && arg !== null && 'fromCommitBox' in arg && arg.fromCommitBox === true;
+}
+
 /**
  * Finds the repository a command applies to:
- * the SCM menu argument, the only repository, the active editor's repository,
+ * the SCM menu argument, the only repository, the repository selected in
+ * Source Control (keybinding only), the active editor's repository,
  * or the user's pick.
  */
 export async function resolveRepository(api: API, arg: unknown): Promise<Repository | undefined> {
@@ -66,6 +72,13 @@ export async function resolveRepository(api: API, arg: unknown): Promise<Reposit
   }
   if (repositories.length <= 1) {
     return repositories[0];
+  }
+
+  if (isFromCommitBox(arg)) {
+    const selected = repositories.filter((r) => r.ui.selected);
+    if (selected.length === 1) {
+      return selected[0];
+    }
   }
 
   const active = vscode.window.activeTextEditor?.document.uri;

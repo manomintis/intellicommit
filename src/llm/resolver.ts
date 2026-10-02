@@ -5,14 +5,14 @@ import { ClaudeCodeProvider } from './claudeCode/claudeCodeProvider';
 import { log } from '../log';
 import { resolveModel, sortByPrice } from './modelSelection';
 import type { CommitMessageProvider } from './provider';
-import { claudeCodeModelLabel, sourceOrder, type Source } from './sources';
+import { sourceOrder, type Source } from './sources';
 import { VsCodeLmProvider } from './vscodeLmProvider';
 
 export interface Resolved {
   readonly ok: true;
   readonly provider: CommitMessageProvider;
   readonly source: Source;
-  /** Short label for the status bar, e.g. "Claude Code · Haiku". */
+  /** Short label, e.g. "Claude Code · Haiku". */
   readonly label: string;
   /** Earlier sources that were unavailable, with the reason. */
   readonly skipped: readonly SourceProblem[];
@@ -126,16 +126,6 @@ export class ProviderResolver implements vscode.Disposable {
 
 export function sourceName(source: Source): string {
   return source === 'claudeCode' ? vscode.l10n.t('Claude Code CLI') : vscode.l10n.t('VS Code LLMs');
-}
-
-/** Status bar label for a source before anything was resolved. */
-export function configuredLabel(): string {
-  const config = getModelConfig();
-  const first = sourceOrder(config.source)[0];
-  if (first === 'claudeCode') {
-    return `Claude Code · ${claudeCodeModelLabel(config.claudeCodeModel)}`;
-  }
-  return config.model !== '' ? config.model : vscode.l10n.t('Auto');
 }
 
 function noVsCodeLlmReason(): string {

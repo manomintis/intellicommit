@@ -11,7 +11,7 @@ No extra subscription needed: IntelliCommit works with your existing Claude plan
 
 ## Features
 
-- **One click.** Click ✨ and the message lands in the commit box. With several repositories open, it goes to the right one.
+- **One click or one shortcut.** Click ✨, or press **⌥↩** (**Alt+Enter** on Windows and Linux) in the commit box, and the message lands right there. With several repositories open, it goes to the right one.
 - **Staged or not.** If you've staged something, the message covers exactly that. If not, it covers everything you changed, new files included. IntelliCommit never stages anything for you.
 - **Proper commit messages.** A short summary line, a blank line, and a wrapped description when it's worth one, the way Git expects (see [Commit message format](#commit-message-format)). It can follow the style of your recent commits, Conventional Commits, or gitmoji.
 - **Uses the AI you already have.** Your Claude plan through Claude Code, or a model from another VS Code extension. If one isn't there, IntelliCommit uses the other.
@@ -30,7 +30,7 @@ No extra subscription needed: IntelliCommit works with your existing Claude plan
 ## Getting started
 
 1. Make some changes in a Git repository.
-2. Open the Source Control view and click **✨** (Generate Commit Message) at the top. You can also run **IntelliCommit: Generate Commit Message** from the Command Palette.
+2. Open the Source Control view and click **✨** (Generate commit message) at the top. You can also press **⌥↩** (**Alt+Enter** on Windows and Linux) while the commit box has focus, or run **IntelliCommit: Generate commit message** from the Command Palette.
 3. Review the message, edit it if you like, and commit.
 
 ![A generated commit message in the Source Control view](images/message.png)
@@ -41,7 +41,7 @@ If the commit box already has text, IntelliCommit replaces it by default. You ca
 
 ## Choosing the AI model
 
-The status bar shows which model IntelliCommit will use. Click it, or run **IntelliCommit: Select LLM Source**, to choose where the model comes from:
+To choose where the model comes from, open the **…** menu at the top of the Source Control view and pick **Select LLM Source**, or run **IntelliCommit: Select LLM Source** from the Command Palette:
 
 ![The Select LLM Source picker](images/model-picker.png)
 
@@ -108,25 +108,15 @@ Some files are listed by name only, and their contents are never sent:
 
 Secrets written inside ordinary files (for example, a token in a source file) are sent like any other change, so review your changes before generating a message. IntelliCommit does not collect any usage data.
 
-## Optional: button inside the commit box
+## Keyboard shortcut
 
-VS Code doesn't yet let published extensions place a button inside the commit message box ([microsoft/vscode#195474](https://github.com/microsoft/vscode/issues/195474)), so the version on the Marketplace shows its button at the top of the Source Control view instead.
+Press **⌥↩** (**Alt+Enter** on Windows and Linux) while the commit box has focus to generate a message without reaching for the mouse. To change the shortcut, search for `intellicommit.generate` in **Preferences: Open Keyboard Shortcuts**.
 
-If you prefer the button inside the box, you can build and install a local version:
-
-1. In a copy of this repository, run `npm install` and then `npm run package:local`. This creates `intellicommit-<version>-local.vsix`.
-2. In VS Code, run **Extensions: Install from VSIX…** and select that file.
-3. Run **Preferences: Configure Runtime Arguments** and add this line to the file that opens:
-   ```jsonc
-   "enable-proposed-api": ["rykantas.intellicommit"]
-   ```
-4. Restart VS Code.
-
-If the button still doesn't appear, use [VS Code Insiders](https://code.visualstudio.com/insiders/), or start VS Code with `--enable-proposed-api rykantas.intellicommit`.
+VS Code doesn't yet let published extensions place a button inside the commit box ([microsoft/vscode#195474](https://github.com/microsoft/vscode/issues/195474)), so the ✨ button sits at the top of the Source Control view.
 
 ## Known limitations
 
-- If another installed extension also adds a ✨ button to Source Control, you may see two of them. Hover over a button to see which is which.
+- If another installed extension also adds a ✨ button to Source Control, you may see two of them with the same hint. To be sure you're using IntelliCommit, press **⌥↩** (**Alt+Enter** on Windows and Linux) in the commit box or run **IntelliCommit: Generate commit message** from the Command Palette.
 - If the `git.untrackedChanges` setting is `hidden`, new files can't be included in the message.
 - IntelliCommit doesn't work in Restricted Mode, because VS Code turns off its Git support there.
 - VS Code models are unavailable when AI features are turned off with the `chat.disableAIFeatures` setting.

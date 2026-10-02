@@ -3,4 +3,4 @@ dist/
 out/
 .vscode-test/
 *.vsix
-.local-ext/
+.DS_Store

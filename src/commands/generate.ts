@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { getConfig, type IntelliCommitConfig } from '../config';
 import { cancelledError, IntelliCommitError, timeoutError, toIntelliCommitError } from '../errors';
 import { collectChanges, hasChanges, type CollectedChanges } from '../git/changes';
-import { getGitApi, resolveRepository, rootUriOf } from '../git/gitApi';
+import { getGitApi, isFromCommitBox, resolveRepository, rootUriOf } from '../git/gitApi';
 import { IdleTimer } from '../idleTimer';
 import { sourceName, type ProviderResolver } from '../llm/resolver';
 import type { CommitMessageProvider } from '../llm/provider';
@@ -14,6 +14,8 @@ import type { Repository } from '../typings/git';
 import { showGenerationError, showNoProviderMessage, showStaleModelWarning } from '../ui/messages';
 
 const SMART_COMMIT_HINT_KEY = 'intellicommit.smartCommitHintDismissed';
+const SHORTCUT_USED_KEY = 'intellicommit.shortcutUsed';
+const SHORTCUT_HINT_KEY = 'intellicommit.shortcutHintShown';
 /** Context key with the root URIs of repositories that are generating; swaps the ✨ button for Stop. */
 const GENERATING_CONTEXT_KEY = 'intellicommit.generatingRepos';
 /** Recent commit subjects used for `auto` style detection and as a style reference in the prompt. */
@@ -69,13 +71,18 @@ export class Generator implements vscode.Disposable {
     });
     this.runs.set(key, { cts, done });
     this.updateContext();
+    if (isFromCommitBox(arg)) {
+      void this.globalState.update(SHORTCUT_USED_KEY, true);
+    }
     if (previous) {
       previous.cts.cancel();
       await previous.done;
     }
 
     try {
-      await this.generate(repo, cts.token);
+      if (await this.generate(repo, cts.token)) {
+        this.maybeShowShortcutHint(arg);
+      }
     } finally {
       if (this.runs.get(key)?.cts === cts) {
         this.runs.delete(key);
@@ -96,32 +103,48 @@ export class Generator implements vscode.Disposable {
     }
   }
 
+  /** After the first message generated without the shortcut, mentions the shortcut once. */
+  private maybeShowShortcutHint(arg: unknown): void {
+    if (
+      isFromCommitBox(arg) ||
+      this.globalState.get<boolean>(SHORTCUT_USED_KEY, false) ||
+      this.globalState.get<boolean>(SHORTCUT_HINT_KEY, false)
+    ) {
+      return;
+    }
+    void this.globalState.update(SHORTCUT_HINT_KEY, true);
+    void vscode.window.showInformationMessage(
+      vscode.l10n.t('Tip: next time, press {0} in the commit box to generate a commit message.', shortcutLabel()),
+    );
+  }
+
   private updateContext(): void {
     const roots = [...this.runs.keys()];
     void vscode.commands.executeCommand('setContext', GENERATING_CONTEXT_KEY, roots.length > 0 ? roots : undefined);
   }
 
-  private async generate(repo: Repository, token: vscode.CancellationToken): Promise<void> {
+  /** Returns true when a message was written to the commit box. */
+  private async generate(repo: Repository, token: vscode.CancellationToken): Promise<boolean> {
     if (!hasChanges(repo)) {
       showNoChanges();
-      return;
+      return false;
     }
     // Set once the commit box may change, so failures before that leave the user's typing alone.
     let box: CommitBox | undefined;
     try {
       const provider = await this.getProvider();
       if (!provider || isCancelled(token)) {
-        return;
+        return false;
       }
 
       const config = getConfig(repo.rootUri);
       const changes = await collectChanges(repo, config.excludeGlobs, config.maxDiffChars);
       if (!changes) {
         showNoChanges();
-        return;
+        return false;
       }
       if (isCancelled(token)) {
-        return;
+        return false;
       }
 
       if (changes.mode === 'all') {
@@ -131,7 +154,7 @@ export class Generator implements vscode.Disposable {
       const existing = repo.inputBox.value;
       const prefix = await this.prefixFor(existing, config);
       if (prefix === undefined || isCancelled(token)) {
-        return;
+        return false;
       }
 
       const title =
@@ -159,6 +182,7 @@ export class Generator implements vscode.Disposable {
           }
         },
       );
+      return true;
     } catch (error) {
       box?.restore();
       const typed = toIntelliCommitError(error);
@@ -168,10 +192,11 @@ export class Generator implements vscode.Disposable {
             ? 'The commit message was edited during generation; generation stopped and the edit was kept.'
             : 'Generation cancelled; restored the previous commit message.',
         );
-        return;
+        return false;
       }
       log().error(typed.message, typed.cause ?? '');
       void showGenerationError(typed);
+      return false;
     }
   }
 
@@ -386,6 +411,10 @@ function throwIfCancelled(token: vscode.CancellationToken): void {
   if (isCancelled(token)) {
     throw cancelledError();
   }
+}
+
+function shortcutLabel(): string {
+  return process.platform === 'darwin' ? '⌥↩' : 'Alt+Enter';
 }
 
 async function recentSubjects(repo: Repository): Promise<string[]> {

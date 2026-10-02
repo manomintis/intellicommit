@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
 import { Generator, RESPONSE_TIMEOUT_MS } from './commands/generate';
 import { selectSource } from './commands/selectSource';
-import { getGitApi } from './git/gitApi';
 import type { CommitMessageProvider } from './llm/provider';
 import { ProviderResolver } from './llm/resolver';
 import { disposeLog } from './log';
-import { ModelStatusBar } from './ui/statusBar';
 
 /** Returned from `activate` only when the extension runs under integration tests. */
 export interface IntelliCommitApi {
@@ -28,13 +26,6 @@ export function activate(context: vscode.ExtensionContext): IntelliCommitApi | u
     }),
     vscode.commands.registerCommand('intellicommit.selectSource', selectSource),
   );
-
-  // The status bar needs the Git API, which may still be initializing; don't block activation.
-  void getGitApi().then((git) => {
-    if (git) {
-      context.subscriptions.push(new ModelStatusBar(git, resolver));
-    }
-  });
 
   if (context.extensionMode !== vscode.ExtensionMode.Test) {
     return undefined;
