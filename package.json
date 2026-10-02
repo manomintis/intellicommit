@@ -2,7 +2,7 @@
   "name": "intellicommit",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "rykantas",
   "license": "MIT",
   "icon": "images/icon.png",
