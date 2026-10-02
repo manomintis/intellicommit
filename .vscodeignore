@@ -20,3 +20,4 @@ CONTRIBUTING.md
 images/*.svg
 images/*.png
 !images/icon.png
+images/*.gif
