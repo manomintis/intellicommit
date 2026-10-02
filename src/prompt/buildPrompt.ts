@@ -43,8 +43,9 @@ const COMMON_RULES = [
   `Keep the subject line at ${SUBJECT_TARGET} characters or fewer if possible; it must never exceed ${SUBJECT_MAX} characters.`,
   'Do not end the subject line with a period.',
   'Be specific and describe the change as a whole (e.g. "Fix null check in config loader", not "Update files" or "Fix bug").',
-  'If the change is small or obvious from the subject, write only the subject line. Do not pad the message with a body.',
-  `Otherwise add one blank line after the subject, then a body that explains what changed and why, not how (the diff shows how). Short "- " bullet lists are fine for several distinct changes. Do not hard-wrap the body: write each paragraph and each list item on a single line.`,
+  'Be brief: say what was added, changed, fixed or removed, not how. Leave out implementation details such as function names, variables, algorithms and code structure; the diff shows them.',
+  'Prefer a subject line only. Add a body only when the commit has several distinct changes that the subject cannot cover.',
+  'A body is one blank line after the subject, then a short "- " bullet list with one change per bullet, each a few words long. At most 5 bullets. No paragraphs of explanation. Do not hard-wrap: each bullet is a single line.',
   'Plain text only: no Markdown headings, bold text or code fences.',
   'Do not start with "This commit". Do not add sign-offs, trailers or co-author lines.',
 ];
@@ -68,17 +69,19 @@ const STYLE_RULES: Readonly<Record<ResolvedStyle, readonly string[]>> = {
 const EXAMPLES: Readonly<Record<ResolvedStyle, readonly string[]>> = {
   traditional: [
     'Fix null check in config loader',
-    'Add retry with backoff to the upload client\n\nUploads failed permanently on the first network hiccup. Retry up to\nthree times with exponential backoff before reporting an error.',
-    'Remove unused feature flags\n\n- Drop the legacy search flag, enabled everywhere since 2.3\n- Drop the beta banner flag and its settings entry',
+    'Retry failed uploads',
+    'Remove unused feature flags\n\n- Drop the legacy search flag\n- Drop the beta banner flag and its setting',
   ],
   conventional: [
     'fix(config): handle missing settings file',
-    'feat(upload): retry failed uploads with backoff\n\nUploads failed permanently on the first network hiccup. Retry up to\nthree times with exponential backoff before reporting an error.',
+    'feat(upload): retry failed uploads',
+    'refactor(settings): simplify settings page\n\n- Merge the general and advanced tabs\n- Remove the unused theme option',
     'refactor!: drop support for the v1 plugin API\n\nBREAKING CHANGE: plugins must implement the v2 interface.',
   ],
   gitmoji: [
     '🐛 Fix null check in config loader',
-    '✨ Add retry with backoff to the upload client\n\nUploads failed permanently on the first network hiccup. Retry up to\nthree times with exponential backoff before reporting an error.',
+    '✨ Retry failed uploads',
+    '🔥 Remove unused feature flags\n\n- Drop the legacy search flag\n- Drop the beta banner flag and its setting',
   ],
 };
 

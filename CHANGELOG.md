@@ -10,6 +10,7 @@ All notable changes to IntelliCommit are documented here.
 - Removed the status bar item. Choose the LLM source from the **…** menu of the Source Control view or the Command Palette.
 - While a message is being generated, the ✨ button turns into a neutral Stop button in the same place.
 - The description is no longer hard-wrapped at 72 characters: each paragraph or list item is one line, so the commit box no longer shows stray line breaks.
+- Commit messages are shorter: they say what changed rather than how, and use a summary line only unless there are several distinct changes, which are listed briefly.
 - Removed the locally built variant with a button inside the commit box; use the keyboard shortcut instead.
 
 ## [1.0.0] - 2026-10-02
