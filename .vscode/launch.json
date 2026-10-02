@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension (button in commit box)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/.local-ext",
+        "--enable-proposed-api=rykantas.intellicommit"
+      ],
+      "outFiles": ["${workspaceFolder}/.local-ext/dist/**/*.js"],
+      "preLaunchTask": "watch (in-box button)"
+    },
+    {
+      "name": "Run Extension (Marketplace manifest, title-bar button only)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "preLaunchTask": "${defaultBuildTask}"
+    }
+  ]
+}

@@ -1,0 +1,342 @@
+{
+  "name": "intellicommit",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "version": "1.0.0",
+  "publisher": "rykantas",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/manomintis/intellicommit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/manomintis/intellicommit/issues"
+  },
+  "homepage": "https://github.com/manomintis/intellicommit#readme",
+  "qna": "https://github.com/manomintis/intellicommit/issues",
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "AI"
+  ],
+  "keywords": [
+    "git",
+    "commit message",
+    "commit message generator",
+    "generate commit message",
+    "ai commit",
+    "conventional commits",
+    "gitmoji",
+    "source control",
+    "claude",
+    "claude code",
+    "llm"
+  ],
+  "main": "./dist/extension.js",
+  "l10n": "./l10n",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "capabilities": {
+    "virtualWorkspaces": false,
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "%untrustedWorkspaces.description%",
+      "restrictedConfigurations": [
+        "intellicommit.customInstructions",
+        "intellicommit.language",
+        "intellicommit.excludeGlobs",
+        "intellicommit.maxDiffChars"
+      ]
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "intellicommit.generate",
+        "title": "%command.generate.title%",
+        "shortTitle": "%command.generate.shortTitle%",
+        "category": "IntelliCommit",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "intellicommit.stop",
+        "title": "%command.stop.title%",
+        "category": "IntelliCommit",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "intellicommit.selectSource",
+        "title": "%command.selectSource.title%",
+        "category": "IntelliCommit"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "intellicommit.generate",
+          "group": "navigation",
+          "when": "scmProvider == git && scmProviderRootUri not in intellicommit.generatingRepos"
+        },
+        {
+          "command": "intellicommit.stop",
+          "group": "navigation",
+          "when": "scmProvider == git && scmProviderRootUri in intellicommit.generatingRepos"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "intellicommit.generate",
+          "when": "gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "intellicommit.stop",
+          "when": "intellicommit.generatingRepos"
+        }
+      ]
+    },
+    "configuration": [
+      {
+        "title": "IntelliCommit",
+        "order": 0,
+        "properties": {
+          "intellicommit.source": {
+            "type": "string",
+            "enum": [
+              "claudeCodeThenVsCode",
+              "vsCodeThenClaudeCode",
+              "claudeCode",
+              "vsCode"
+            ],
+            "enumItemLabels": [
+              "%config.source.claudeCodeThenVsCode.label%",
+              "%config.source.vsCodeThenClaudeCode.label%",
+              "%config.source.claudeCode.label%",
+              "%config.source.vsCode.label%"
+            ],
+            "enumDescriptions": [
+              "%config.source.claudeCodeThenVsCode%",
+              "%config.source.vsCodeThenClaudeCode%",
+              "%config.source.claudeCode%",
+              "%config.source.vsCode%"
+            ],
+            "default": "claudeCodeThenVsCode",
+            "scope": "application",
+            "order": 0,
+            "markdownDescription": "%config.source%"
+          },
+          "intellicommit.style": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "conventional",
+              "traditional",
+              "gitmoji"
+            ],
+            "enumDescriptions": [
+              "%config.style.auto%",
+              "%config.style.conventional%",
+              "%config.style.traditional%",
+              "%config.style.gitmoji%"
+            ],
+            "default": "auto",
+            "scope": "resource",
+            "order": 1,
+            "markdownDescription": "%config.style%"
+          },
+          "intellicommit.language": {
+            "type": "string",
+            "default": "auto",
+            "scope": "resource",
+            "order": 2,
+            "markdownDescription": "%config.language%"
+          },
+          "intellicommit.customInstructions": {
+            "type": "string",
+            "default": "",
+            "editPresentation": "multilineText",
+            "maxLength": 2000,
+            "scope": "resource",
+            "order": 3,
+            "markdownDescription": "%config.customInstructions%"
+          },
+          "intellicommit.onExistingText": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "append",
+              "ask"
+            ],
+            "enumDescriptions": [
+              "%config.onExistingText.replace%",
+              "%config.onExistingText.append%",
+              "%config.onExistingText.ask%"
+            ],
+            "default": "replace",
+            "scope": "resource",
+            "order": 4,
+            "markdownDescription": "%config.onExistingText%"
+          },
+          "intellicommit.excludeGlobs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "package-lock.json",
+              "npm-shrinkwrap.json",
+              "yarn.lock",
+              "pnpm-lock.yaml",
+              "bun.lockb",
+              "bun.lock",
+              "Cargo.lock",
+              "poetry.lock",
+              "Pipfile.lock",
+              "uv.lock",
+              "composer.lock",
+              "Gemfile.lock",
+              "go.sum",
+              "packages.lock.json",
+              "flake.lock",
+              "*.min.js",
+              "*.min.css",
+              "*.map",
+              "*.snap",
+              "**/dist/**",
+              "**/out/**",
+              "**/build/**",
+              "**/node_modules/**",
+              "**/vendor/**",
+              "*.generated.*",
+              "*.pb.go",
+              "*_pb2.py"
+            ],
+            "scope": "resource",
+            "order": 5,
+            "markdownDescription": "%config.excludeGlobs%"
+          },
+          "intellicommit.maxDiffChars": {
+            "type": "number",
+            "default": 20000,
+            "minimum": 1000,
+            "maximum": 100000,
+            "scope": "resource",
+            "order": 6,
+            "markdownDescription": "%config.maxDiffChars%"
+          }
+        }
+      },
+      {
+        "id": "intellicommit.claudeCode",
+        "title": "%config.section.claudeCode%",
+        "order": 1,
+        "properties": {
+          "intellicommit.claudeCode.model": {
+            "type": "string",
+            "enum": [
+              "haiku",
+              "sonnet",
+              "opus",
+              "fable"
+            ],
+            "enumItemLabels": [
+              "Haiku",
+              "Sonnet",
+              "Opus",
+              "Fable"
+            ],
+            "enumDescriptions": [
+              "%config.claudeCode.model.haiku%",
+              "%config.claudeCode.model.sonnet%",
+              "%config.claudeCode.model.opus%",
+              "%config.claudeCode.model.fable%"
+            ],
+            "default": "haiku",
+            "scope": "application",
+            "order": 0,
+            "markdownDescription": "%config.claudeCode.model%"
+          },
+          "intellicommit.claudeCode.path": {
+            "type": "string",
+            "default": "",
+            "scope": "machine",
+            "order": 1,
+            "markdownDescription": "%config.claudeCode.path%"
+          }
+        }
+      },
+      {
+        "id": "intellicommit.vsCode",
+        "title": "%config.section.vsCode%",
+        "order": 2,
+        "properties": {
+          "intellicommit.model": {
+            "type": "string",
+            "default": "",
+            "scope": "application",
+            "order": 0,
+            "markdownDescription": "%config.model%"
+          },
+          "intellicommit.preferredModels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "gpt-5-mini",
+              "gpt-5.4-mini",
+              "flash",
+              "gpt-5.4-nano",
+              "gpt-4o-mini",
+              "haiku"
+            ],
+            "scope": "application",
+            "order": 1,
+            "markdownDescription": "%config.preferredModels%"
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "package:vsix": "vsce package",
+    "package:local": "node scripts/package-local.mjs",
+    "vscode:prepublish": "npm run package",
+    "compile-tests": "tsc -p . --outDir out",
+    "pretest": "npm run compile-tests && npm run compile",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "mocha --ui tdd \"out/test/unit/**/*.test.js\"",
+    "test:integration": "vscode-test",
+    "l10n": "vscode-l10n-dev export --outDir ./l10n ./src"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.19.0",
+    "@types/vscode": "1.91.0",
+    "@vscode/l10n-dev": "^0.0.35",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "globals": "^17.13.0",
+    "mocha": "^12.0.3",
+    "npm-run-all2": "^9.0.3",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0"
+  }
+}
