@@ -72,7 +72,7 @@
         "command": "intellicommit.stop",
         "title": "%command.stop.title%",
         "category": "IntelliCommit",
-        "icon": "$(debug-stop)"
+        "icon": "$(stop-circle)"
       },
       {
         "command": "intellicommit.selectSource",
@@ -92,12 +92,12 @@
       "scm/title": [
         {
           "command": "intellicommit.generate",
-          "group": "navigation",
+          "group": "navigation@-1",
           "when": "scmProvider == git && scmProviderRootUri not in intellicommit.generatingRepos"
         },
         {
           "command": "intellicommit.stop",
-          "group": "navigation",
+          "group": "navigation@-1",
           "when": "scmProvider == git && scmProviderRootUri in intellicommit.generatingRepos"
         },
         {
