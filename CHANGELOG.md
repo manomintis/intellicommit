@@ -12,6 +12,10 @@ All notable changes to IntelliCommit are documented here.
 - The description is no longer hard-wrapped at 72 characters: each paragraph or list item is one line, so the commit box no longer shows stray line breaks.
 - Commit messages are shorter: they say what changed rather than how, and use a summary line only unless there are several distinct changes, which are listed briefly.
 - Removed the locally built variant with a button inside the commit box; use the keyboard shortcut instead.
+- Files matching `intellicommit.excludeGlobs` are also left out when your Git config sets `diff.noprefix`, `diff.mnemonicPrefix` or `diff.srcPrefix`/`diff.dstPrefix`; previously their contents could be sent.
+- A renamed or copied file is excluded when its old path is excluded, e.g. `.env` renamed to `notes.txt`.
+- Likely secrets in other files are replaced with `[REDACTED]` before sending: private keys, passwords in URLs, and well-known token formats.
+- The contents of more credential files are never sent: `.yarnrc.yml`, `.dev.vars`, `.vault-token`, `.s3cfg`, `.boto`, Cargo and RubyGems credentials, Terraform CLI credentials, and `*.pkcs12`.
 
 ## [1.0.0] - 2026-10-02
 

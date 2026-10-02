@@ -88,9 +88,10 @@ export async function collectChanges(
     log().warn(`Ignoring invalid pattern in intellicommit.excludeGlobs: ${glob}`);
   });
   const conflicts = state.mergeChanges.map((c): FileEntry => ({ path: relativePath(root, c.uri), status: 'conflicted' }));
+  const known = knownPaths(root, [...state.indexChanges, ...state.workingTreeChanges, ...state.mergeChanges]);
 
   if (mode === 'staged') {
-    const diff = parseDiff(await repo.diff(true), isExcluded);
+    const diff = parseDiff(await repo.diff(true), isExcluded, known);
     return {
       mode,
       files: [...state.indexChanges.map((c) => toEntry(root, c)), ...conflicts],
@@ -98,7 +99,7 @@ export async function collectChanges(
     };
   }
 
-  const tracked = parseDiff(await repo.diff(false), isExcluded);
+  const tracked = parseDiff(await repo.diff(false), isExcluded, known);
   const included: FileDiff[] = [...tracked.included];
   const omitted = [...tracked.omitted];
   let footprint = included.reduce((sum, file) => sum + minimumFootprint(file), 0);
@@ -160,6 +161,19 @@ async function readUntracked(uri: vscode.Uri): Promise<string | { reason: OmitRe
 /** Characters a file takes in the diff when truncated as far as `fitDiff` goes. */
 function minimumFootprint(file: FileDiff): number {
   return truncateFile(file, MIN_CHARS_PER_FILE).length + 1;
+}
+
+/** Every path Git reports as changed, including the old and new paths of renames. */
+function knownPaths(root: vscode.Uri, changes: readonly Change[]): Set<string> {
+  const paths = new Set<string>();
+  for (const change of changes) {
+    for (const uri of [change.uri, change.originalUri, change.renameUri]) {
+      if (uri) {
+        paths.add(relativePath(root, uri));
+      }
+    }
+  }
+  return paths;
 }
 
 function toEntry(root: vscode.Uri, change: Change): FileEntry {

@@ -52,19 +52,48 @@ export function findClaudeCli(configuredPath: string): Promise<ClaudeCli | undef
 
 export function clearClaudeCliCache(): void {
   cache.clear();
+  failedProbes.clear();
 }
 
-async function probeAll(candidateList: readonly string[]): Promise<ClaudeCli | undefined> {
+/** How long an executable that failed `--version` is skipped, unless it changes first. */
+const FAILED_PROBE_TTL_MS = 5 * 60_000;
+
+/**
+ * Executables that failed `--version`, with their modification time. A broken install
+ * would otherwise cost up to the probe timeout on every generation. Reinstalling or
+ * updating changes the modification time, so a fixed install is tried again at once.
+ */
+const failedProbes = new Map<string, { readonly mtimeMs: number; readonly at: number }>();
+
+/** Exported for tests. */
+export async function probeAll(candidateList: readonly string[]): Promise<ClaudeCli | undefined> {
   for (const candidate of candidateList) {
     const path = isAbsolute(candidate) ? ((await isFile(candidate)) ? candidate : undefined) : await findOnPath(candidate);
     if (path === undefined) {
       continue;
     }
+    const mtimeMs = await modifiedTime(path);
+    const failed = failedProbes.get(path);
+    if (failed && failed.mtimeMs === mtimeMs && Date.now() - failed.at < FAILED_PROBE_TTL_MS) {
+      continue;
+    }
     if (await probe(path)) {
+      failedProbes.delete(path);
       return { path };
+    }
+    if (mtimeMs !== undefined) {
+      failedProbes.set(path, { mtimeMs, at: Date.now() });
     }
   }
   return undefined;
+}
+
+async function modifiedTime(path: string): Promise<number | undefined> {
+  try {
+    return (await stat(path)).mtimeMs;
+  } catch {
+    return undefined;
+  }
 }
 
 /**

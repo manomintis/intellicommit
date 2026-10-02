@@ -3,7 +3,7 @@
 [![CI](https://github.com/manomintis/intellicommit/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/manomintis/intellicommit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-IntelliCommit is a Visual Studio Code extension that writes Git commit messages for you. Click ✨ in the Source Control view, and a clear, well-formatted message describing your changes appears in the commit box.
+IntelliCommit is a Visual Studio Code extension that writes Git commit messages for you. Press ⌥↩ (Alt+Enter) or click ✨ in Source Control to get a clear, well-formatted commit message.
 
 ![Generating a commit message with IntelliCommit](images/demo.gif)
 
@@ -11,7 +11,7 @@ No extra subscription needed: IntelliCommit works with your existing Claude plan
 
 ## Features
 
-- **One click or one shortcut.** Click ✨, or press **⌥↩** (**Alt+Enter** on Windows and Linux) in the commit box, and the message lands right there. With several repositories open, it goes to the right one.
+- **One press or one click.** Press **⌥↩** (**Alt+Enter** on Windows and Linux) in the commit box, or click ✨, and the message lands right there. With several repositories open, it goes to the right one.
 - **Staged or not.** If you've staged something, the message covers exactly that. If not, it covers everything you changed, new files included. IntelliCommit never stages anything for you.
 - **Proper commit messages.** A short summary line, plus a brief list of changes when there are several, the way Git expects (see [Commit message format](#commit-message-format)). It can follow the style of your recent commits, Conventional Commits, or gitmoji.
 - **Uses the AI you already have.** Your Claude plan through Claude Code, or a model from another VS Code extension. If one isn't there, IntelliCommit uses the other.
@@ -105,9 +105,10 @@ Some files are listed by name only, and their contents are never sent:
 
 - files matching `intellicommit.excludeGlobs`
 - binary files, and new files larger than 200 KB
-- files that typically hold passwords or keys, such as `.env`, `*.pem`, `*.key`, SSH keys, `.npmrc`, and cloud credential files
+- files that typically hold passwords or keys, such as `.env`, `*.pem`, `*.key`, SSH keys, `.npmrc`, `.yarnrc.yml`, and cloud credential files
+- renamed or copied files whose old path matches one of the above
 
-Secrets written inside ordinary files (for example, a token in a source file) are sent like any other change, so review your changes before generating a message. IntelliCommit does not collect any usage data.
+In other files, IntelliCommit replaces likely secrets with `[REDACTED]` before sending: private keys, passwords in URLs (`scheme://user:password@host`), and tokens with a recognizable format (AWS, GitHub, GitLab, Slack, Anthropic, OpenAI, Stripe, Google, npm, and JSON Web Tokens). Other secrets, such as a password assigned to a variable, are sent like any other change, so review your changes before generating a message. IntelliCommit does not collect any usage data.
 
 ## Keyboard shortcut
 

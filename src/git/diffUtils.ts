@@ -71,15 +71,23 @@ const DIFF_GIT_RE = /^diff --git a\/(.+?) b\/(.+)$/;
  * Splits `git diff` output into per-file sections, leaving out excluded and binary
  * files. Omitted files are identified from their header alone, so a large lockfile
  * diff is never split into lines.
+ *
+ * `knownPaths` are the repo-relative paths Git reports as changed. They identify a
+ * section's file whatever prefixes the user's Git config puts in the diff
+ * (`diff.noprefix`, `diff.mnemonicPrefix`, `diff.srcPrefix`/`dstPrefix`).
  */
-export function parseDiff(diff: string, isExcluded: (path: string) => boolean): FilteredDiff {
+export function parseDiff(
+  diff: string,
+  isExcluded: (path: string) => boolean,
+  knownPaths: ReadonlySet<string> = new Set(),
+): FilteredDiff {
   const included: FileDiff[] = [];
   const omitted: OmittedFile[] = [];
   for (const section of splitSections(diff)) {
     const hunkStart = section.indexOf('\n@@');
     const headerLines = toLines(hunkStart === -1 ? section : section.slice(0, hunkStart));
-    const { path, binary } = parseHeader(headerLines);
-    if (isExcluded(path)) {
+    const { path, alsoCheck, binary } = parseHeader(headerLines, knownPaths);
+    if (isExcluded(path) || alsoCheck.some(isExcluded)) {
       omitted.push({ path, reason: 'excluded' });
     } else if (binary) {
       omitted.push({ path, reason: 'binary' });
@@ -102,39 +110,116 @@ function toLines(text: string): string[] {
   return text.replace(/\r\n?/g, '\n').split('\n');
 }
 
-function parseHeader(lines: readonly string[]): { path: string; binary: boolean } {
-  let path = pathFromDiffGitLine(lines[0] ?? '');
+interface Header {
+  /** The file's (new) path. */
+  readonly path: string;
+  /**
+   * Other paths the exclude patterns must not match: the old path of a rename or copy,
+   * and, when the path could not be confirmed, every way of reading the header.
+   */
+  readonly alsoCheck: readonly string[];
+  readonly binary: boolean;
+}
+
+function parseHeader(lines: readonly string[], knownPaths: ReadonlySet<string>): Header {
+  const diffGitLine = lines[0] ?? '';
   let binary = false;
+  let renamedTo: string | undefined;
+  let renamedFrom: string | undefined;
+  let plusPath: string | undefined;
+  let minusPath: string | undefined;
   for (const line of lines) {
     if (line.startsWith('Binary files ') || line === 'GIT binary patch') {
       binary = true;
     } else if (line.startsWith('+++ ')) {
-      // Git appends a tab to this line when the path contains a space.
-      const target = unquoteGitPath(line.slice('+++ '.length).replace(/\t$/, ''));
-      if (target.startsWith('b/')) {
-        path = target.slice('b/'.length);
-      }
-    } else if (line.startsWith('rename to ')) {
-      path = unquoteGitPath(line.slice('rename to '.length));
+      plusPath = headerPath(line.slice('+++ '.length));
+    } else if (line.startsWith('--- ')) {
+      minusPath = headerPath(line.slice('--- '.length));
+    } else if (/^(?:rename|copy) to /.test(line)) {
+      renamedTo = unquoteGitPath(line.replace(/^\w+ to /, ''));
+    } else if (/^(?:rename|copy) from /.test(line)) {
+      renamedFrom = unquoteGitPath(line.replace(/^\w+ from /, ''));
     }
   }
-  return { path, binary };
+
+  const oldPath = renamedFrom ?? (minusPath?.startsWith('a/') ? minusPath.slice('a/'.length) : undefined);
+  const alsoCheck = oldPath === undefined ? [] : [oldPath];
+  const newSide = newSideOfDiffGitLine(diffGitLine);
+  const confirmed =
+    renamedTo ??
+    defaultPrefixPath(diffGitLine) ??
+    knownPath(newSide, knownPaths) ??
+    (plusPath?.startsWith('b/') ? plusPath.slice('b/'.length) : undefined) ??
+    (plusPath === '/dev/null' && minusPath?.startsWith('a/') ? minusPath.slice('a/'.length) : undefined);
+  if (confirmed !== undefined) {
+    return { path: confirmed, alsoCheck, binary };
+  }
+  // Unknown prefixes: the path is a guess, so the excludes are checked against every reading of it.
+  return { path: stripPrefix(newSide), alsoCheck: [...alsoCheck, ...pathSuffixes(newSide)], binary };
 }
 
-/** The new path from a `diff --git a/<old> b/<new>` line, where either path may be quoted. */
-function pathFromDiffGitLine(line: string): string {
+/** A path from a `---`/`+++` line; git appends a tab to it when the path contains a space. */
+function headerPath(text: string): string {
+  return unquoteGitPath(text.replace(/\t$/, ''));
+}
+
+/**
+ * The new side of a `diff --git <old> <new>` line, decoded. When neither path is
+ * quoted, the two cannot be told apart reliably, so both are returned.
+ */
+function newSideOfDiffGitLine(line: string): string {
   const paths = line.slice(SECTION_START.length);
-  let target: string;
   if (paths.startsWith('"')) {
-    target = paths.slice(quotedLength(paths) + 1);
-  } else if (paths.endsWith('"')) {
-    // An unquoted path never contains a quote, so the first one opens the new path.
-    target = paths.slice(paths.indexOf('"'));
-  } else {
-    return DIFF_GIT_RE.exec(line)?.[2] ?? paths;
+    return unquoteGitPath(paths.slice(quotedLength(paths) + 1));
   }
-  const decoded = unquoteGitPath(target);
-  return decoded.startsWith('b/') ? decoded.slice('b/'.length) : decoded;
+  if (paths.endsWith('"')) {
+    // An unquoted path never contains a quote, so the first one opens the new path.
+    return unquoteGitPath(paths.slice(paths.indexOf('"')));
+  }
+  return paths;
+}
+
+/** The path from `diff --git a/<path> b/<path>`, the default format for a file that kept its name. */
+function defaultPrefixPath(line: string): string | undefined {
+  const paths = line.slice(SECTION_START.length);
+  const path = paths.slice('a/'.length, 'a/'.length + (paths.length - 'a/ b/'.length) / 2);
+  return path !== '' && paths === `a/${path} b/${path}` ? path : undefined;
+}
+
+/** Best guess when the path is not confirmed: the new side without the default `a/`/`b/` prefixes. */
+function stripPrefix(newSide: string): string {
+  const match = DIFF_GIT_RE.exec(`${SECTION_START}${newSide}`);
+  return match?.[2] ?? (newSide.startsWith('b/') ? newSide.slice('b/'.length) : newSide);
+}
+
+/** `text` and every suffix of it that starts after a space or a slash, longest first. */
+function pathSuffixes(text: string): string[] {
+  const suffixes = [text];
+  for (let i = 1; i < text.length; i++) {
+    const before = text.charAt(i - 1);
+    if (before === ' ' || before === '/') {
+      suffixes.push(text.slice(i));
+    }
+  }
+  return suffixes;
+}
+
+/**
+ * The longest known path the new side ends with, preceded by at most one prefix
+ * segment such as `i/`. Requiring that keeps `x` from being taken for `dir/x` when
+ * Git's status lists only `x`.
+ */
+function knownPath(newSide: string, knownPaths: ReadonlySet<string>): string | undefined {
+  if (knownPaths.size === 0) {
+    return undefined;
+  }
+  return pathSuffixes(newSide).find((suffix) => {
+    if (!knownPaths.has(suffix)) {
+      return false;
+    }
+    const before = newSide.slice(0, newSide.length - suffix.length);
+    return /^[^/]*\/?$/.test(before.slice(before.lastIndexOf(' ') + 1));
+  });
 }
 
 /** Length of the quoted string at the start of `text`, including both quotes. */

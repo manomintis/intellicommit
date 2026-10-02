@@ -99,6 +99,45 @@ suite('parseDiff', () => {
     assert.deepEqual(parseDiff(diff, createExcludeMatcher(SECRET_GLOBS)).omitted, [{ path: 'my dir/.env', reason: 'excluded' }]);
   });
 
+  suite('with prefixes changed by the Git config', () => {
+    const secret = (prefixA: string, prefixB: string, path: string): string =>
+      `diff --git ${prefixA}${path} ${prefixB}${path}\nnew file mode 100644\n--- /dev/null\n+++ ${prefixB}${path}\n@@ -0,0 +1 @@\n+token=1\n`;
+    const isExcluded = createExcludeMatcher([...SECRET_GLOBS, 'private/**']);
+    const configs = [
+      ['diff.noprefix', '', ''],
+      ['diff.mnemonicPrefix', 'c/', 'i/'],
+      ['diff.srcPrefix/dstPrefix', 'x/', 'y/'],
+    ] as const;
+
+    for (const [name, prefixA, prefixB] of configs) {
+      test(`${name}: identifies files from the paths Git reports`, () => {
+        const diff = secret(prefixA, prefixB, 'private/conf.yml') + secret(prefixA, prefixB, 'src/a.ts');
+        const result = parseDiff(diff, isExcluded, new Set(['private/conf.yml', 'src/a.ts']));
+        assert.deepEqual(result.included.map((f) => f.path), ['src/a.ts']);
+        assert.deepEqual(result.omitted, [{ path: 'private/conf.yml', reason: 'excluded' }]);
+      });
+
+      test(`${name}: excludes an unlisted file if any reading of its path matches`, () => {
+        assert.deepEqual(parseDiff(secret(prefixA, prefixB, 'private/conf.yml'), isExcluded).included, []);
+      });
+    }
+
+    test('does not take a shorter listed path for a longer one', () => {
+      const diff = secret('c/', 'i/', 'private/x');
+      assert.deepEqual(parseDiff(diff, isExcluded, new Set(['x'])).included, []);
+    });
+  });
+
+  test('excludes a renamed file whose old path is excluded', () => {
+    const diff = 'diff --git a/.env b/notes.txt\nsimilarity index 90%\nrename from .env\nrename to notes.txt\n--- a/.env\n+++ b/notes.txt\n@@ -1 +1 @@\n-A=1\n+A=2\n';
+    assert.deepEqual(parseDiff(diff, createExcludeMatcher(SECRET_GLOBS)).omitted, [{ path: 'notes.txt', reason: 'excluded' }]);
+  });
+
+  test('excludes a copy whose source is excluded', () => {
+    const diff = 'diff --git a/.env b/env.bak\nsimilarity index 90%\ncopy from .env\ncopy to env.bak\n--- a/.env\n+++ b/env.bak\n@@ -1 +1 @@\n-A=1\n+A=2\n';
+    assert.deepEqual(parseDiff(diff, createExcludeMatcher(SECRET_GLOBS)).omitted, [{ path: 'env.bak', reason: 'excluded' }]);
+  });
+
   test('does not mistake an added "++" line for a file header', () => {
     const diff = 'diff --git a/x.md b/x.md\n--- a/x.md\n+++ b/x.md\n@@ -1 +1 @@\n-a\n+++ b/other\n';
     assert.deepEqual(pathsOf(diff), ['x.md']);

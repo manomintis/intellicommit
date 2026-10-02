@@ -10,6 +10,7 @@ import { log } from '../log';
 import { diffTokenBudget, fitDiff, MAX_MESSAGE_CHARS } from '../prompt/budget';
 import { buildChangesHeader, buildInstructions, buildPromptInput, resolveStyle, type PromptParams } from '../prompt/buildPrompt';
 import { formatCommitMessage } from '../prompt/formatCommitMessage';
+import { redactSecrets } from '../prompt/redact';
 import type { Repository } from '../typings/git';
 import { showGenerationError, showNoProviderMessage, showStaleModelWarning } from '../ui/messages';
 
@@ -131,6 +132,8 @@ export class Generator implements vscode.Disposable {
     }
     // Set once the commit box may change, so failures before that leave the user's typing alone.
     let box: CommitBox | undefined;
+    // Started early so `git log` runs alongside provider resolution and change collection; it never rejects.
+    const recentPromise = recentSubjects(repo);
     try {
       const provider = await this.getProvider();
       if (!provider || isCancelled(token)) {
@@ -156,6 +159,7 @@ export class Generator implements vscode.Disposable {
       if (prefix === undefined || isCancelled(token)) {
         return false;
       }
+      const recent = await recentPromise;
 
       const title =
         changes.mode === 'staged'
@@ -176,7 +180,7 @@ export class Generator implements vscode.Disposable {
             }),
           ];
           try {
-            await this.stream(commitBox, provider, changes, config, prefix, linked.token);
+            await this.stream(commitBox, provider, changes, recent, config, prefix, linked.token);
           } finally {
             vscode.Disposable.from(...subscriptions, linked).dispose();
           }
@@ -204,11 +208,11 @@ export class Generator implements vscode.Disposable {
     box: CommitBox,
     provider: CommitMessageProvider,
     changes: CollectedChanges,
+    recent: readonly string[],
     config: IntelliCommitConfig,
     prefix: string,
     token: vscode.CancellationToken,
   ): Promise<void> {
-    const recent = await recentSubjects(box.repo);
     const style = resolveStyle(config.style, recent);
     const params: PromptParams = {
       style,
@@ -233,6 +237,10 @@ export class Generator implements vscode.Disposable {
       `Describing ${changes.mode} changes (${changes.files.length} files) with ${provider.displayName} in ${style} style; ` +
         `diff level: ${fitted.level}, ${fitted.text.length} chars, budget ${budget} tokens.`,
     );
+    const diff = redactSecrets(fitted.text);
+    if (diff.count > 0) {
+      log().info(`Redacted ${diff.count} likely secret(s) from the diff.`);
+    }
     throwIfCancelled(token);
 
     // Also cancelled when the response reaches MAX_MESSAGE_CHARS, which is not an error,
@@ -248,7 +256,7 @@ export class Generator implements vscode.Disposable {
     let raw = '';
     let lastPreviewAt = 0;
     try {
-      for await (const fragment of provider.generate(buildPromptInput(params, fitted.text), request.token)) {
+      for await (const fragment of provider.generate(buildPromptInput(params, diff.text), request.token)) {
         throwIfCancelled(token);
         idle.restart();
         raw += fragment;

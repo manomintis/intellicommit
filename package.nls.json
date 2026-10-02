@@ -1,6 +1,6 @@
 {
   "displayName": "IntelliCommit",
-  "description": "Generate Git commit messages with one click or ⌥↩ (Alt+Enter) in the commit box. Uses the Claude Code CLI or LLMs available in VS Code.",
+  "description": "Press ⌥↩ (Alt+Enter) in the commit box, or click ✨, to generate a Git commit message. Uses the Claude Code CLI or LLMs available in VS Code.",
   "untrustedWorkspaces.description": "IntelliCommit needs the built-in Git extension, which is disabled in Restricted Mode. Workspace-level prompt and diff settings are ignored until the workspace is trusted.",
   "command.generate.title": "Generate commit message",
   "command.stop.title": "Stop generating commit message",

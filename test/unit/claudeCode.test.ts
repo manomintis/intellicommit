@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
-import { claudeCommand, findOnPath, quoteForCmd } from '../../src/llm/claudeCode/cli';
+import { claudeCommand, clearClaudeCliCache, findOnPath, probeAll, quoteForCmd } from '../../src/llm/claudeCode/cli';
 import { buildClaudeArgs, classifyClaudeError, parseClaudeLine } from '../../src/llm/claudeCode/protocol';
 import { claudeCodeModelLabel, sourceOrder } from '../../src/llm/sources';
 
@@ -147,5 +147,43 @@ suite('findOnPath', () => {
   test('ignores relative PATH entries', async () => {
     process.env.PATH = ['.', 'node_modules'].join(delimiter);
     assert.equal(await findOnPath('package.json'), undefined);
+  });
+});
+
+suite('probeAll', () => {
+  teardown(() => {
+    clearClaudeCliCache();
+  });
+
+  test('skips an executable that failed until it changes or settings change', async function () {
+    if (process.platform === 'win32') {
+      this.skip();
+    }
+    const dir = mkdtempSync(join(tmpdir(), 'intellicommit-probe-'));
+    const runs = join(dir, 'runs');
+    const cli = join(dir, 'claude');
+    // Records each run and prints no version, so the check fails.
+    writeFileSync(cli, `#!/bin/sh\necho run >> '${runs}'\nexit 1\n`);
+    chmodSync(cli, 0o755);
+    const runCount = (): number => readFileSync(runs, 'utf8').split('\n').filter((l) => l !== '').length;
+    try {
+      assert.equal(await probeAll([cli]), undefined);
+      assert.equal(await probeAll([cli]), undefined);
+      assert.equal(runCount(), 1, 'a failed executable is not run again');
+
+      utimesSync(cli, new Date(), new Date(Date.now() + 60_000));
+      assert.equal(await probeAll([cli]), undefined);
+      assert.equal(runCount(), 2, 'a changed executable is run again');
+
+      clearClaudeCliCache();
+      assert.equal(await probeAll([cli]), undefined);
+      assert.equal(runCount(), 3, 'a settings change retries');
+
+      writeFileSync(cli, '#!/bin/sh\necho 2.1.0\n');
+      utimesSync(cli, new Date(), new Date(Date.now() + 120_000));
+      assert.deepEqual(await probeAll([cli]), { path: cli });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
