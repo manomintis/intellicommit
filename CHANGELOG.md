@@ -2,6 +2,10 @@
 
 All notable changes to IntelliCommit are documented here.
 
+## [1.1.1] - 2026-10-02
+
+- Updated the extension description.
+
 ## [1.1.0] - 2026-10-02
 
 - Typing in the commit box while a message is being written stops the generation and keeps your text, instead of overwriting it.
