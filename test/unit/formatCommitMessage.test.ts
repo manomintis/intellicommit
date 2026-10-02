@@ -28,11 +28,11 @@ suite('formatCommitMessage', () => {
     { name: 'collapses extra blank lines after the subject', input: 'Add login form\n\n\n\nIt validates input.', expected: 'Add login form\n\nIt validates input.' },
     { name: 'trims trailing whitespace and CRLF', input: 'Add login form   \r\n\r\nBody text.  \r\n', expected: 'Add login form\n\nBody text.' },
     {
-      name: 'rewraps long body paragraphs at 72',
+      name: 'keeps long body paragraphs on one line',
       input:
         'Add retry to uploads\n\nUploads failed permanently on the first network hiccup which was very annoying for users on flaky connections, so retry them.',
       expected:
-        'Add retry to uploads\n\nUploads failed permanently on the first network hiccup which was very\nannoying for users on flaky connections, so retry them.',
+        'Add retry to uploads\n\nUploads failed permanently on the first network hiccup which was very annoying for users on flaky connections, so retry them.',
     },
     {
       name: 'joins short unwrapped lines of one paragraph',
@@ -40,16 +40,16 @@ suite('formatCommitMessage', () => {
       expected: 'Add retry\n\nUploads failed permanently.',
     },
     {
-      name: 'keeps list items separate and wraps them with a hanging indent',
+      name: 'keeps list items separate and unwraps their continuation lines',
       input:
-        'Remove flags\n\n* Drop the legacy search flag which has been enabled everywhere since release 2.3 anyway\n- Drop the beta banner',
+        'Remove flags\n\n* Drop the legacy search flag which has been enabled everywhere since\n  release 2.3 anyway\n- Drop the beta banner',
       expected:
-        'Remove flags\n\n- Drop the legacy search flag which has been enabled everywhere since\n  release 2.3 anyway\n- Drop the beta banner',
+        'Remove flags\n\n- Drop the legacy search flag which has been enabled everywhere since release 2.3 anyway\n- Drop the beta banner',
     },
     {
       name: 'never breaks URLs',
       input: 'Document API\n\nSee https://example.com/a/very/long/url/that/goes/on/and/on/and/on/forever/and/ever/index.html for details.',
-      expected: 'Document API\n\nSee\nhttps://example.com/a/very/long/url/that/goes/on/and/on/and/on/forever/and/ever/index.html\nfor details.',
+      expected: 'Document API\n\nSee https://example.com/a/very/long/url/that/goes/on/and/on/and/on/forever/and/ever/index.html for details.',
     },
     { name: 'removes Markdown bold and headings in the body', input: 'Add form\n\n## Details\n**Validates** input.', expected: 'Add form\n\nDetails Validates input.' },
     { name: 'keeps trailers intact', input: 'Add form\n\nRefs: #123\nCo-authored-by: A <a@example.com>', expected: 'Add form\n\nRefs: #123\nCo-authored-by: A <a@example.com>' },

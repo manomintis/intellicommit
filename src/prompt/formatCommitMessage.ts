@@ -2,7 +2,6 @@ export type ResolvedStyle = 'traditional' | 'conventional' | 'gitmoji';
 
 export const SUBJECT_TARGET = 50;
 export const SUBJECT_MAX = 72;
-export const BODY_WIDTH = 72;
 
 export interface FormatResult {
   readonly message: string;
@@ -218,7 +217,7 @@ function formatParagraph(lines: readonly string[]): string {
     return lines.join('\n');
   }
 
-  // Group into list items (with continuation lines) and plain text runs.
+  // Group into list items (with continuation lines) and plain text runs, unwrapping hard breaks.
   const blocks: { indent: string; marker: string; words: string[] }[] = [];
   for (const line of lines) {
     const item = LIST_ITEM_RE.exec(line);
@@ -233,7 +232,8 @@ function formatParagraph(lines: readonly string[]): string {
       }
     }
   }
-  return blocks.map((b) => wrap(b.words, b.indent + b.marker, b.indent + ' '.repeat(b.marker.length))).join('\n');
+  // One line per paragraph or list item; the commit box and Git tools soft-wrap it to fit.
+  return blocks.map((b) => b.indent + b.marker + b.words.join(' ')).join('\n');
 }
 
 function words(text: string): string[] {
@@ -245,27 +245,4 @@ const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 /** Length in user-perceived characters (an emoji counts as one). */
 export function displayLength(text: string): number {
   return Array.from(graphemes.segment(text)).length;
-}
-
-/** Greedy word wrap; long words (URLs) are never broken. */
-export function wrap(wordList: readonly string[], firstPrefix: string, nextPrefix: string, width = BODY_WIDTH): string {
-  const out: string[] = [];
-  let line = firstPrefix;
-  let length = displayLength(firstPrefix);
-  const nextPrefixLength = displayLength(nextPrefix);
-  let lineHasWord = false;
-  for (const word of wordList) {
-    const wordLength = displayLength(word);
-    if (lineHasWord && length + 1 + wordLength > width) {
-      out.push(line);
-      line = nextPrefix + word;
-      length = nextPrefixLength + wordLength;
-    } else {
-      line += (lineHasWord ? ' ' : '') + word;
-      length += (lineHasWord ? 1 : 0) + wordLength;
-    }
-    lineHasWord = true;
-  }
-  out.push(line);
-  return out.join('\n');
 }

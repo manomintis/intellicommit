@@ -1,6 +1,6 @@
 import type { ChangeMode, FileEntry, FilteredDiff, OmitReason } from '../git/diffUtils';
 import type { PromptInput } from '../llm/provider';
-import { BODY_WIDTH, CONVENTIONAL_RE, LEADING_GITMOJI_RE, SUBJECT_MAX, SUBJECT_TARGET, type ResolvedStyle } from './formatCommitMessage';
+import { CONVENTIONAL_RE, LEADING_GITMOJI_RE, SUBJECT_MAX, SUBJECT_TARGET, type ResolvedStyle } from './formatCommitMessage';
 
 export type StyleSetting = ResolvedStyle | 'auto';
 
@@ -44,7 +44,7 @@ const COMMON_RULES = [
   'Do not end the subject line with a period.',
   'Be specific and describe the change as a whole (e.g. "Fix null check in config loader", not "Update files" or "Fix bug").',
   'If the change is small or obvious from the subject, write only the subject line. Do not pad the message with a body.',
-  `Otherwise add one blank line after the subject, then a body wrapped at ${BODY_WIDTH} characters that explains what changed and why, not how (the diff shows how). Short "- " bullet lists are fine for several distinct changes.`,
+  `Otherwise add one blank line after the subject, then a body that explains what changed and why, not how (the diff shows how). Short "- " bullet lists are fine for several distinct changes. Do not hard-wrap the body: write each paragraph and each list item on a single line.`,
   'Plain text only: no Markdown headings, bold text or code fences.',
   'Do not start with "This commit". Do not add sign-offs, trailers or co-author lines.',
 ];

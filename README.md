@@ -13,7 +13,7 @@ No extra subscription needed: IntelliCommit works with your existing Claude plan
 
 - **One click or one shortcut.** Click ✨, or press **⌥↩** (**Alt+Enter** on Windows and Linux) in the commit box, and the message lands right there. With several repositories open, it goes to the right one.
 - **Staged or not.** If you've staged something, the message covers exactly that. If not, it covers everything you changed, new files included. IntelliCommit never stages anything for you.
-- **Proper commit messages.** A short summary line, a blank line, and a wrapped description when it's worth one, the way Git expects (see [Commit message format](#commit-message-format)). It can follow the style of your recent commits, Conventional Commits, or gitmoji.
+- **Proper commit messages.** A short summary line, a blank line, and a description when it's worth one, the way Git expects (see [Commit message format](#commit-message-format)). It can follow the style of your recent commits, Conventional Commits, or gitmoji.
 - **Uses the AI you already have.** Your Claude plan through Claude Code, or a model from another VS Code extension. If one isn't there, IntelliCommit uses the other.
 - **Quick and cheap by default.** It picks small, fast models unless you tell it otherwise.
 - **Copes with big changes.** Lock files and generated files are skipped, and huge diffs are trimmed to fit what the model can read.
@@ -87,7 +87,7 @@ IntelliCommit asks the AI to follow these rules, and corrects the result where n
 - Start with a short summary line written as a command ("Add", "Fix", "Remove" — not "Added" or "Fixes").
 - Keep the summary to about 50 characters, and no more than 72. A longer summary is kept as is rather than cut off mid-sentence.
 - Start with a capital letter, with no period at the end of the summary.
-- Add an optional longer description after a blank line, wrapped at 72 characters, explaining what changed and why. Small changes get a summary line only.
+- Add an optional longer description after a blank line, explaining what changed and why. Each paragraph or list item is a single line, so it fits any window width without stray line breaks. Small changes get a summary line only.
 - Use plain text, without formatting symbols, quotes, or emoji (except in the `gitmoji` style).
 
 The `conventional` style uses the `type(scope): description` format, for example `fix(parser): handle empty input`.
