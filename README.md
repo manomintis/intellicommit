@@ -139,4 +139,6 @@ Bug reports, ideas, and pull requests are welcome. Please [open an issue](https:
 
 IntelliCommit is released under the [MIT License](LICENSE).
 
+The icon is based on the "sparkle" icon from [VS Code Codicons](https://github.com/microsoft/vscode-codicons), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
 IntelliCommit is not affiliated with or endorsed by Microsoft or Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.

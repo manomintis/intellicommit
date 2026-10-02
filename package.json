@@ -6,6 +6,10 @@
   "publisher": "rykantas",
   "license": "MIT",
   "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#1F1F1F",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/manomintis/intellicommit.git"
