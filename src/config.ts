@@ -58,12 +58,9 @@ export function getModelConfig(): ModelConfig {
 
 export const MODEL_SETTINGS = ['source', 'model', 'preferredModels', 'claudeCode.model', 'claudeCode.path'].map((k) => `${SECTION}.${k}`);
 
-/** Saves user-level model settings; an empty string resets a setting to its default. */
-export async function updateModelConfig(values: Partial<Record<'source' | 'model' | 'claudeCode.model', string>>): Promise<void> {
-  const c = vscode.workspace.getConfiguration(SECTION);
-  for (const [key, value] of Object.entries(values)) {
-    await c.update(key, value === '' ? undefined : value, vscode.ConfigurationTarget.Global);
-  }
+/** Saves the LLM source in the user settings. */
+export async function updateSource(source: SourceSetting): Promise<void> {
+  await vscode.workspace.getConfiguration(SECTION).update('source', source, vscode.ConfigurationTarget.Global);
 }
 
 /** True when VS Code's AI features, and with them all VS Code LLMs, are turned off. */

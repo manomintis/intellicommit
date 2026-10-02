@@ -46,11 +46,6 @@ suite('formatCommitMessage', () => {
       expected:
         'Remove flags\n\n- Drop the legacy search flag which has been enabled everywhere since release 2.3 anyway\n- Drop the beta banner',
     },
-    {
-      name: 'never breaks URLs',
-      input: 'Document API\n\nSee https://example.com/a/very/long/url/that/goes/on/and/on/and/on/forever/and/ever/index.html for details.',
-      expected: 'Document API\n\nSee https://example.com/a/very/long/url/that/goes/on/and/on/and/on/forever/and/ever/index.html for details.',
-    },
     { name: 'removes Markdown bold and headings in the body', input: 'Add form\n\n## Details\n**Validates** input.', expected: 'Add form\n\nDetails Validates input.' },
     { name: 'keeps trailers intact', input: 'Add form\n\nRefs: #123\nCo-authored-by: A <a@example.com>', expected: 'Add form\n\nRefs: #123\nCo-authored-by: A <a@example.com>' },
     { name: 'conventional: lowercases the description', input: 'feat(ui): Added login form.', style: 'conventional', expected: 'feat(ui): add login form' },

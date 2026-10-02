@@ -156,6 +156,24 @@ suite('IntelliCommit', () => {
     assert.equal(repo.inputBox.value, 'Draft');
   });
 
+  test('the stop command without a repository (Command Palette) cancels every run', async () => {
+    repo.inputBox.value = 'Draft';
+    api.setProviderOverride(new MockProvider(['Partial subject'], true));
+    const run = vscode.commands.executeCommand('intellicommit.generate', repo);
+    await until(() => repo.inputBox.value.includes('Partial subject'), 'the run to stream');
+
+    await vscode.commands.executeCommand('intellicommit.stop');
+    await run;
+
+    assert.equal(repo.inputBox.value, 'Draft');
+  });
+
+  test('the commit box shortcut generates a message', async () => {
+    api.setProviderOverride(new MockProvider(['Add shortcut']));
+    await vscode.commands.executeCommand('intellicommit.generate', { fromCommitBox: true });
+    assert.equal(repo.inputBox.value, 'Add shortcut');
+  });
+
   test('editing the commit box during generation stops it and keeps the edit', async () => {
     let requestCancelled = false;
     const trickle: CommitMessageProvider = {

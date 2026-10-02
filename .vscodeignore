@@ -4,7 +4,6 @@
 src/**
 out/**
 test/**
-scripts/**
 node_modules/**
 **/*.ts
 **/*.map

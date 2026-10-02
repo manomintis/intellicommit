@@ -6,7 +6,7 @@ import type { API, GitExtension, Repository } from '../typings/git';
  * Git extension is disabled (e.g. `git.enabled: false` or Restricted Mode) or
  * does not finish initializing within `timeoutMs`.
  */
-export async function getGitApi(timeoutMs?: number): Promise<API | undefined> {
+export async function getGitApi(timeoutMs: number): Promise<API | undefined> {
   const extension = vscode.extensions.getExtension<GitExtension>('vscode.git');
   if (!extension) {
     return undefined;
@@ -22,7 +22,7 @@ export async function getGitApi(timeoutMs?: number): Promise<API | undefined> {
   return undefined;
 }
 
-function whenInitialized(api: API, timeoutMs: number | undefined): Promise<boolean> {
+function whenInitialized(api: API, timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {
     const listener = api.onDidChangeState((state) => {
       if (state === 'initialized') {
@@ -31,13 +31,10 @@ function whenInitialized(api: API, timeoutMs: number | undefined): Promise<boole
         resolve(true);
       }
     });
-    const timer =
-      timeoutMs === undefined
-        ? undefined
-        : setTimeout(() => {
-            listener.dispose();
-            resolve(false);
-          }, timeoutMs);
+    const timer = setTimeout(() => {
+      listener.dispose();
+      resolve(false);
+    }, timeoutMs);
   });
 }
 

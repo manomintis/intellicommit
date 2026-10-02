@@ -32,47 +32,26 @@ export interface SourceProblem {
 
 /**
  * Picks the provider for the next generation: the configured sources in order,
- * falling back only when a source is unavailable. Nothing is checked until the
- * first explicit `resolve`; after that, model and setting changes refresh the result.
+ * falling back only when a source is unavailable.
  */
 export class ProviderResolver implements vscode.Disposable {
-  private readonly changeEmitter = new vscode.EventEmitter<void>();
-  private readonly disposables: vscode.Disposable[] = [this.changeEmitter];
-  private last: Resolved | Unresolved | undefined;
+  private readonly configListener = vscode.workspace.onDidChangeConfiguration((e) => {
+    if (MODEL_SETTINGS.some((s) => e.affectsConfiguration(s))) {
+      clearClaudeCliCache();
+    }
+  });
   private lastLoggedModels = '';
-
-  /** Fires after the resolved provider may have changed. */
-  readonly onDidChange = this.changeEmitter.event;
-
-  constructor() {
-    this.disposables.push(
-      vscode.lm.onDidChangeChatModels(() => void this.refresh()),
-      vscode.workspace.onDidChangeConfiguration((e) => {
-        if (MODEL_SETTINGS.some((s) => e.affectsConfiguration(s))) {
-          clearClaudeCliCache();
-          void this.refresh();
-        }
-      }),
-    );
-  }
-
-  /** The most recent resolution, if any has happened yet. */
-  get current(): Resolved | Unresolved | undefined {
-    return this.last;
-  }
 
   async resolve(): Promise<Resolved | Unresolved> {
     const config = getModelConfig();
     const problems: SourceProblem[] = [];
-    let result: Resolved | Unresolved | undefined;
 
     for (const source of sourceOrder(config.source)) {
       if (source === 'claudeCode') {
         const cli = await findClaudeCli(config.claudeCodePath);
         if (cli) {
           const provider = new ClaudeCodeProvider(cli, config.claudeCodeModel);
-          result = { ok: true, provider, source, label: provider.displayName, skipped: problems, staleModelId: undefined };
-          break;
+          return { ok: true, provider, source, label: provider.displayName, skipped: problems, staleModelId: undefined };
         }
         problems.push({ source, reason: vscode.l10n.t('the Claude Code CLI was not found') });
       } else {
@@ -80,7 +59,7 @@ export class ProviderResolver implements vscode.Disposable {
         this.logVsCodeModels(models);
         const resolution = resolveModel(models, config.model, config.preferredModels);
         if (resolution.model) {
-          result = {
+          return {
             ok: true,
             provider: new VsCodeLmProvider(resolution.model),
             source,
@@ -88,26 +67,12 @@ export class ProviderResolver implements vscode.Disposable {
             skipped: problems,
             staleModelId: resolution.staleExplicitId,
           };
-          break;
         }
         problems.push({ source, reason: noVsCodeLlmReason() });
       }
     }
 
-    this.last = result ?? { ok: false, problems };
-    this.changeEmitter.fire();
-    return this.last;
-  }
-
-  private async refresh(): Promise<void> {
-    if (!this.last) {
-      return;
-    }
-    try {
-      await this.resolve();
-    } catch {
-      // Listing models can fail transiently while providers register; the next event retries.
-    }
+    return { ok: false, problems };
   }
 
   /** Lists available VS Code LLM ids in the log, so users can copy one into `intellicommit.model`. */
@@ -120,7 +85,7 @@ export class ProviderResolver implements vscode.Disposable {
   }
 
   dispose(): void {
-    vscode.Disposable.from(...this.disposables).dispose();
+    this.configListener.dispose();
   }
 }
 

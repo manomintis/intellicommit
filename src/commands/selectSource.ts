@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getModelConfig, updateModelConfig } from '../config';
+import { getModelConfig, updateSource } from '../config';
 import { SOURCE_SETTINGS, type SourceSetting } from '../llm/sources';
 
 interface SourceItem extends vscode.QuickPickItem {
@@ -42,6 +42,6 @@ export async function selectSource(): Promise<void> {
   quickPick.dispose();
 
   if (picked) {
-    await updateModelConfig({ source: picked.value });
+    await updateSource(picked.value);
   }
 }

@@ -42,7 +42,7 @@ To try the extension, open the folder in VS Code and press <kbd>F5</kbd>.
 4. If you changed how the extension behaves or added a setting, update `README.md`, and add a line to `CHANGELOG.md`.
 5. Keep each pull request focused on one change, and write commit messages in the style described in the README's [Commit message format](README.md#commit-message-format) section.
 
-Every pull request is checked automatically on Linux, Windows, and macOS: types, lint, and unit tests on all three, plus integration tests and packaging on Linux. A pull request is ready to merge once these checks pass and it has been reviewed.
+Every pull request is checked automatically on Linux, Windows, and macOS: types, lint, unit tests, and integration tests on all three, plus packaging on Linux. A pull request is ready to merge once these checks pass and it has been reviewed.
 
 ## Why VS Code 1.91 is the minimum version
 
