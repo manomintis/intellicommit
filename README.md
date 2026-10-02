@@ -35,7 +35,7 @@ No extra subscription needed: IntelliCommit works with your existing Claude plan
 
 ![A generated commit message in the Source Control view](images/message.png)
 
-While the message is being written, the ✨ button becomes a **Stop** button. If you stop it, or if something goes wrong, the commit box returns to what it contained before.
+While the message is being written, the ✨ button becomes a **Stop** button. If you stop it, or if something goes wrong, the commit box returns to what it contained before. If you start typing in the commit box while the message is being written, IntelliCommit stops and keeps your text. If the language model stops responding for 60 seconds, the request is cancelled.
 
 If the commit box already has text, IntelliCommit replaces it by default. You can change this to add the new message below it, or to ask each time.
 

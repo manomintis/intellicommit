@@ -40,7 +40,7 @@ export async function showStaleModelWarning(id: string): Promise<void> {
 export async function showGenerationError(error: IntelliCommitError): Promise<void> {
   const selectSource = vscode.l10n.t('Select Source');
   const showLog = vscode.l10n.t('Show Log');
-  const modelProblem = ['noModels', 'accessDenied', 'quota', 'blocked'].includes(error.kind);
+  const modelProblem = ['noModels', 'accessDenied', 'quota', 'blocked', 'timeout'].includes(error.kind);
   const choice = await vscode.window.showErrorMessage(error.message, ...(modelProblem ? [selectSource, showLog] : [showLog]));
   if (choice === selectSource) {
     await vscode.commands.executeCommand('intellicommit.selectSource');

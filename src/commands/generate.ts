@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { getConfig, type IntelliCommitConfig } from '../config';
-import { cancelledError, IntelliCommitError, toIntelliCommitError } from '../errors';
+import { cancelledError, IntelliCommitError, timeoutError, toIntelliCommitError } from '../errors';
 import { collectChanges, hasChanges, type CollectedChanges } from '../git/changes';
 import { getGitApi, resolveRepository, rootUriOf } from '../git/gitApi';
+import { IdleTimer } from '../idleTimer';
 import { sourceName, type ProviderResolver } from '../llm/resolver';
 import type { CommitMessageProvider } from '../llm/provider';
 import { log } from '../log';
@@ -21,6 +22,8 @@ const RECENT_SUBJECT_COUNT = 10;
 const GIT_INIT_TIMEOUT_MS = 30_000;
 /** Minimum time between commit box updates while a message streams in; the final message is always shown. */
 const PREVIEW_INTERVAL_MS = 80;
+/** Longest wait for the first or the next part of the response before the request is abandoned. */
+export const RESPONSE_TIMEOUT_MS = 60_000;
 
 interface Run {
   readonly cts: vscode.CancellationTokenSource;
@@ -34,6 +37,8 @@ export class Generator implements vscode.Disposable {
   private fallbackNoticeShown = false;
   /** Replaces the language model backend; set only through the integration-test API. */
   providerOverride: CommitMessageProvider | undefined;
+  /** Changed only through the integration-test API. */
+  responseTimeoutMs = RESPONSE_TIMEOUT_MS;
 
   constructor(
     private readonly globalState: vscode.Memento,
@@ -102,7 +107,7 @@ export class Generator implements vscode.Disposable {
       return;
     }
     // Set once the commit box may change, so failures before that leave the user's typing alone.
-    let original: string | undefined;
+    let box: CommitBox | undefined;
     try {
       const provider = await this.getProvider();
       if (!provider || isCancelled(token)) {
@@ -133,7 +138,8 @@ export class Generator implements vscode.Disposable {
         changes.mode === 'staged'
           ? vscode.l10n.t('IntelliCommit: describing staged changes…')
           : vscode.l10n.t('IntelliCommit: nothing staged, describing all changes…');
-      original = existing;
+      const commitBox = new CommitBox(repo, existing);
+      box = commitBox;
       await vscode.window.withProgress(
         { location: vscode.ProgressLocation.SourceControl, title, cancellable: true },
         async (_progress, progressToken) => {
@@ -147,19 +153,21 @@ export class Generator implements vscode.Disposable {
             }),
           ];
           try {
-            await this.stream(repo, provider, changes, config, prefix, linked.token);
+            await this.stream(commitBox, provider, changes, config, prefix, linked.token);
           } finally {
             vscode.Disposable.from(...subscriptions, linked).dispose();
           }
         },
       );
     } catch (error) {
-      if (original !== undefined) {
-        repo.inputBox.value = original;
-      }
+      box?.restore();
       const typed = toIntelliCommitError(error);
       if (typed.kind === 'cancelled') {
-        log().info('Generation cancelled; restored the previous commit message.');
+        log().info(
+          box?.userEdited
+            ? 'The commit message was edited during generation; generation stopped and the edit was kept.'
+            : 'Generation cancelled; restored the previous commit message.',
+        );
         return;
       }
       log().error(typed.message, typed.cause ?? '');
@@ -168,14 +176,14 @@ export class Generator implements vscode.Disposable {
   }
 
   private async stream(
-    repo: Repository,
+    box: CommitBox,
     provider: CommitMessageProvider,
     changes: CollectedChanges,
     config: IntelliCommitConfig,
     prefix: string,
     token: vscode.CancellationToken,
   ): Promise<void> {
-    const recent = await recentSubjects(repo);
+    const recent = await recentSubjects(box.repo);
     const style = resolveStyle(config.style, recent);
     const params: PromptParams = {
       style,
@@ -202,9 +210,14 @@ export class Generator implements vscode.Disposable {
     );
     throwIfCancelled(token);
 
-    // Also cancelled when the response reaches MAX_MESSAGE_CHARS, which is not an error.
+    // Also cancelled when the response reaches MAX_MESSAGE_CHARS, which is not an error,
+    // when the response stalls, and when the loop exits on an error or a user edit.
     const request = new vscode.CancellationTokenSource();
     const forwardCancel = token.onCancellationRequested(() => {
+      request.cancel();
+    });
+    const idle = new IdleTimer(this.responseTimeoutMs, () => {
+      log().warn(`No response for ${this.responseTimeoutMs} ms; the request was cancelled.`);
       request.cancel();
     });
     let raw = '';
@@ -212,6 +225,7 @@ export class Generator implements vscode.Disposable {
     try {
       for await (const fragment of provider.generate(buildPromptInput(params, fitted.text), request.token)) {
         throwIfCancelled(token);
+        idle.restart();
         raw += fragment;
         if (raw.length >= MAX_MESSAGE_CHARS) {
           raw = raw.slice(0, MAX_MESSAGE_CHARS);
@@ -224,16 +238,20 @@ export class Generator implements vscode.Disposable {
           continue;
         }
         lastPreviewAt = now;
-        const preview = prefix + formatCommitMessage(raw, style).message;
-        if (preview !== repo.inputBox.value) {
-          repo.inputBox.value = preview;
-        }
+        box.write(prefix + formatCommitMessage(raw, style).message);
       }
+    } catch (error) {
+      request.cancel();
+      throw idle.fired && !isCancelled(token) ? timeoutError(this.responseTimeoutMs) : error;
     } finally {
+      idle.dispose();
       forwardCancel.dispose();
       request.dispose();
     }
     throwIfCancelled(token);
+    if (idle.fired) {
+      throw timeoutError(this.responseTimeoutMs);
+    }
 
     const result = formatCommitMessage(raw, style);
     if (result.message === '') {
@@ -242,7 +260,7 @@ export class Generator implements vscode.Disposable {
     for (const warning of result.warnings) {
       log().warn(warning);
     }
-    repo.inputBox.value = prefix + result.message;
+    box.write(prefix + result.message);
   }
 
   private async getProvider(): Promise<CommitMessageProvider | undefined> {
@@ -315,6 +333,43 @@ export class Generator implements vscode.Disposable {
     }
     this.runs.clear();
     this.updateContext();
+  }
+}
+
+/**
+ * The commit box during one generation. IntelliCommit owns it only while it still holds
+ * what IntelliCommit last wrote; once the user types into it, their text is never replaced.
+ */
+class CommitBox {
+  private written: string;
+
+  constructor(
+    readonly repo: Repository,
+    private readonly original: string,
+  ) {
+    this.written = original;
+  }
+
+  get userEdited(): boolean {
+    return this.repo.inputBox.value !== this.written;
+  }
+
+  /** Throws a cancellation error when the user has edited the box, which stops the generation. */
+  write(value: string): void {
+    if (this.userEdited) {
+      throw cancelledError();
+    }
+    if (value !== this.written) {
+      this.repo.inputBox.value = value;
+      this.written = value;
+    }
+  }
+
+  /** Puts back the text from before the generation, unless the user has edited the box. */
+  restore(): void {
+    if (!this.userEdited) {
+      this.write(this.original);
+    }
   }
 }
 

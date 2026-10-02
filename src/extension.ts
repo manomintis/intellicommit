@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Generator } from './commands/generate';
+import { Generator, RESPONSE_TIMEOUT_MS } from './commands/generate';
 import { selectSource } from './commands/selectSource';
 import { getGitApi } from './git/gitApi';
 import type { CommitMessageProvider } from './llm/provider';
@@ -10,6 +10,8 @@ import { ModelStatusBar } from './ui/statusBar';
 /** Returned from `activate` only when the extension runs under integration tests. */
 export interface IntelliCommitApi {
   setProviderOverride(provider: CommitMessageProvider | undefined): void;
+  /** Undefined restores the default. */
+  setResponseTimeout(ms: number | undefined): void;
 }
 
 export function activate(context: vscode.ExtensionContext): IntelliCommitApi | undefined {
@@ -40,6 +42,9 @@ export function activate(context: vscode.ExtensionContext): IntelliCommitApi | u
   return {
     setProviderOverride(provider) {
       generator.providerOverride = provider;
+    },
+    setResponseTimeout(ms) {
+      generator.responseTimeoutMs = ms ?? RESPONSE_TIMEOUT_MS;
     },
   };
 }

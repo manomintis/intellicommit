@@ -3,6 +3,7 @@ import { chmodSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import * as vscode from 'vscode';
+import type { IntelliCommitApi } from '../../src/extension';
 import type { API, GitExtension, Repository } from '../../src/typings/git';
 
 /**
@@ -18,6 +19,9 @@ pwd > "$dir/cwd.txt"
 echo "$MAX_THINKING_TOKENS $CLAUDE_CODE_MAX_OUTPUT_TOKENS" > "$dir/env.txt"
 printf '%s' "$input" > "$dir/stdin.txt"
 case "$input" in
+  *HANG_PLEASE*)
+    echo "$$" > "$dir/pid.txt"
+    exec sleep 30;;
   *FAIL_PLEASE*)
     echo '{"type":"result","subtype":"success","is_error":true,"result":"Not logged in · Please run /login","api_error_status":401}'
     exit 1;;
@@ -34,12 +38,16 @@ suite('Claude Code CLI source', function () {
     return;
   }
   let repo: Repository;
+  let api: IntelliCommitApi;
   const dir = mkdtempSync(join(tmpdir(), 'intellicommit-fake-claude-'));
   const fake = join(dir, 'claude');
   const config = (): vscode.WorkspaceConfiguration => vscode.workspace.getConfiguration('intellicommit');
   const set = (key: string, value: unknown): Thenable<void> => config().update(key, value, vscode.ConfigurationTarget.Global);
 
   suiteSetup(async () => {
+    const exported = await vscode.extensions.getExtension<IntelliCommitApi | undefined>('rykantas.intellicommit')?.activate();
+    assert.ok(exported, 'the test API is available in test mode');
+    api = exported;
     writeFileSync(fake, FAKE_CLAUDE);
     chmodSync(fake, 0o755);
     const gitExtension = vscode.extensions.getExtension<GitExtension>('vscode.git');
@@ -55,6 +63,7 @@ suite('Claude Code CLI source', function () {
   });
 
   teardown(async () => {
+    api.setResponseTimeout(undefined);
     for (const key of ['source', 'claudeCode.path', 'claudeCode.model', 'customInstructions']) {
       await set(key, undefined);
     }
@@ -98,4 +107,36 @@ suite('Claude Code CLI source', function () {
     await vscode.commands.executeCommand('intellicommit.generate', repo);
     assert.equal(repo.inputBox.value, 'Keep me');
   });
+
+  test('a CLI that hangs times out, is stopped, and the previous text is restored', async () => {
+    await set('source', 'claudeCode');
+    await set('claudeCode.path', fake);
+    await set('customInstructions', 'HANG_PLEASE');
+    api.setResponseTimeout(500);
+    repo.inputBox.value = 'Keep me';
+    await vscode.commands.executeCommand('intellicommit.generate', repo);
+    assert.equal(repo.inputBox.value, 'Keep me');
+
+    const pid = Number(readFileSync(join(dir, 'pid.txt'), 'utf8').trim());
+    await until(() => !isRunning(pid), 'the CLI process to exit');
+  });
 });
+
+function isRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function until(condition: () => boolean, message: string, timeoutMs = 5000): Promise<void> {
+  const start = Date.now();
+  while (!condition()) {
+    if (Date.now() - start > timeoutMs) {
+      assert.fail(`Timed out waiting for: ${message}`);
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}

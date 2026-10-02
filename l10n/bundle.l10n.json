@@ -1,5 +1,6 @@
 {
   "Generation was cancelled.": "Generation was cancelled.",
+  "The language model stopped responding for {0} seconds. Try again later or pick another model.": "The language model stopped responding for {0} seconds. Try again later or pick another model.",
   "IntelliCommit is not allowed to use this language model. Allow access when prompted, or pick another model.": "IntelliCommit is not allowed to use this language model. Allow access when prompted, or pick another model.",
   "The selected language model is no longer available.": "The selected language model is no longer available.",
   "The language model request was blocked: {0}": "The language model request was blocked: {0}",

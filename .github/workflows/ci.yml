@@ -30,7 +30,11 @@ jobs:
       - run: npm run test:unit
 
   integration:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,5 +45,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run pretest
-      - run: xvfb-run -a npm run test:integration
-      - run: npx vsce package --out intellicommit.vsix
+      - if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:integration
+      - if: runner.os != 'Linux'
+        run: npm run test:integration
+      - if: runner.os == 'Linux'
+        run: npx vsce package --out intellicommit.vsix

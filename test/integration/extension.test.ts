@@ -81,6 +81,7 @@ suite('IntelliCommit', () => {
 
   teardown(async () => {
     api.setProviderOverride(undefined);
+    api.setResponseTimeout(undefined);
     await vscode.workspace.getConfiguration('intellicommit').update('onExistingText', undefined, vscode.ConfigurationTarget.Global);
     await vscode.workspace.getConfiguration('intellicommit').update('source', undefined, vscode.ConfigurationTarget.Global);
     repo.inputBox.value = '';
@@ -152,6 +153,45 @@ suite('IntelliCommit', () => {
     await vscode.commands.executeCommand('intellicommit.stop', repo);
     await run;
 
+    assert.equal(repo.inputBox.value, 'Draft');
+  });
+
+  test('editing the commit box during generation stops it and keeps the edit', async () => {
+    let requestCancelled = false;
+    const trickle: CommitMessageProvider = {
+      id: 'trickle',
+      displayName: 'Trickle',
+      maxInputTokens: () => Promise.resolve(undefined),
+      countTokens: () => Promise.resolve(1),
+      async *generate(_prompt, token) {
+        token.onCancellationRequested(() => {
+          requestCancelled = true;
+        });
+        yield 'Partial subject';
+        while (!token.isCancellationRequested) {
+          await new Promise((r) => setTimeout(r, 20));
+          yield ' more';
+        }
+      },
+    };
+    repo.inputBox.value = 'Draft';
+    api.setProviderOverride(trickle);
+    const run = vscode.commands.executeCommand('intellicommit.generate', repo);
+    await until(() => repo.inputBox.value.startsWith('Partial subject'), 'the run to stream');
+
+    repo.inputBox.value = 'My own words';
+    await run;
+
+    assert.ok(requestCancelled, 'the request was cancelled');
+    assert.equal(repo.inputBox.value, 'My own words');
+  });
+
+  test('a response that stalls times out and restores the previous text', async () => {
+    api.setResponseTimeout(300);
+    repo.inputBox.value = 'Draft';
+    api.setProviderOverride(new MockProvider(['Partial subject'], true));
+    // Resolves only because the timeout cancels the request the mock is waiting on.
+    await vscode.commands.executeCommand('intellicommit.generate', repo);
     assert.equal(repo.inputBox.value, 'Draft');
   });
 

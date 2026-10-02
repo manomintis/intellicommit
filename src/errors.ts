@@ -17,6 +17,13 @@ export function cancelledError(cause?: unknown): IntelliCommitError {
   return new IntelliCommitError('cancelled', vscode.l10n.t('Generation was cancelled.'), { cause });
 }
 
+export function timeoutError(ms: number): IntelliCommitError {
+  return new IntelliCommitError(
+    'timeout',
+    vscode.l10n.t('The language model stopped responding for {0} seconds. Try again later or pick another model.', Math.ceil(ms / 1000)),
+  );
+}
+
 /** Maps any failure, including VS Code Language Model API errors, to a typed error. */
 export function toIntelliCommitError(error: unknown, token?: vscode.CancellationToken): IntelliCommitError {
   if (error instanceof IntelliCommitError) {
