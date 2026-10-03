@@ -2,7 +2,7 @@
   "name": "intellicommit",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "rykantas",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -85,7 +85,9 @@
         "command": "intellicommit.generate",
         "key": "alt+enter",
         "when": "scmRepository && gitOpenRepositoryCount != 0",
-        "args": { "fromCommitBox": true }
+        "args": {
+          "fromCommitBox": true
+        }
       }
     ],
     "menus": {

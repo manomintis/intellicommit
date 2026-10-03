@@ -2,6 +2,10 @@
 
 All notable changes to IntelliCommit are documented here.
 
+## [1.1.2] - 2026-10-03
+
+- Clarified in the README that no extra subscription is needed.
+
 ## [1.1.1] - 2026-10-02
 
 - Updated the extension description.
