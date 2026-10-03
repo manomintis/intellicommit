@@ -5,9 +5,9 @@
 
 IntelliCommit is a Visual Studio Code extension that writes Git commit messages for you. Press ⌥↩ (Alt+Enter) or click ✨ in Source Control to get a clear, well-formatted commit message.
 
-![Generating a commit message with IntelliCommit](images/demo.gif)
+No extra subscription needed: if you already use Claude Code or another AI extension in VS Code, you don't have to pay for a separate commit-message service just for this one feature. IntelliCommit works with your existing Claude plan through Claude Code, or with any AI model that another VS Code extension makes available.
 
-No extra subscription needed: IntelliCommit works with your existing Claude plan through Claude Code, or with any AI model that another VS Code extension makes available.
+![Generating a commit message with IntelliCommit](images/demo.gif)
 
 ## Features
 
